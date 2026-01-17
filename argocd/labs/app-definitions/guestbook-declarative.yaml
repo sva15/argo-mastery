@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: guestbook-declarative
+  namespace: argocd
+  # Add finalizer for proper cleanup
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  # Project name
+  project: default
+  
+  # Source repository
+  source:
+    repoURL: https://github.com/sva15/argocd-demo-apps.git
+    targetRevision: HEAD
+    path: guestbook-app/manifests
+  
+  # Destination cluster and namespace
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dev
+  
+  # Sync policy
+  syncPolicy:
+    # Automated sync options (disabled for now)
+    # automated:
+    #   prune: true
+    #   selfHeal: true
+    
+    # Sync options
+    syncOptions:
+      - CreateNamespace=true  # Auto-create namespace if doesn't exist
