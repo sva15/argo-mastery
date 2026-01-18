@@ -1,0 +1,125 @@
+---
+# Development Project
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: dev-project
+  namespace: argocd
+  # Finalizer for cleanup
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Development environment project
+  
+  # Source repositories allowed for apps in this project
+  sourceRepos:
+    - 'https://github.com/YOUR_USERNAME/*'
+    - 'https://github.com/argoproj/*'  # For examples
+  
+  # Destination clusters and namespaces allowed
+  destinations:
+    - namespace: 'dev'
+      server: https://kubernetes.default.svc
+    - namespace: 'dev-*'  # Allow dev-team1, dev-team2, etc.
+      server: https://kubernetes.default.svc
+  
+  # Cluster-scoped resources allowed
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+  
+  # Namespace-scoped resources allowed (empty = all allowed)
+  namespaceResourceWhitelist:
+    - group: 'apps'
+      kind: Deployment
+    - group: 'apps'
+      kind: StatefulSet
+    - group: ''
+      kind: Service
+    - group: ''
+      kind: ConfigMap
+    - group: ''
+      kind: Secret
+  
+  # Denied resources (blacklist takes precedence)
+  namespaceResourceBlacklist:
+    - group: ''
+      kind: ResourceQuota  # Don't allow devs to modify quotas
+  
+  # Orphaned resources monitoring
+  orphanedResources:
+    warn: true  # Warn about resources not tracked by ArgoCD
+
+---
+# Production Project - More restrictive
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: prod-project
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Production environment project (restricted)
+  
+  sourceRepos:
+    - 'https://github.com/YOUR_USERNAME/argocd-demo-apps.git'  # Only specific repo
+  
+  destinations:
+    - namespace: 'production'
+      server: https://kubernetes.default.svc
+  
+  # Limit what can be deployed in production
+  namespaceResourceWhitelist:
+    - group: 'apps'
+      kind: Deployment
+    - group: 'apps'
+      kind: StatefulSet
+    - group: ''
+      kind: Service
+    - group: ''
+      kind: ConfigMap
+    # Note: Secrets deployment requires additional approval
+  
+  # Strict orphaned resource handling
+  orphanedResources:
+    warn: false
+    error: true  # Error on orphaned resources in prod
+
+---
+# Team-specific Project
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: team-frontend
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Frontend team project
+  
+  sourceRepos:
+    - 'https://github.com/YOUR_USERNAME/frontend-*'
+  
+  destinations:
+    - namespace: 'frontend-*'
+      server: https://kubernetes.default.svc
+  
+  # Roles for RBAC
+  roles:
+    # Developer role - can sync apps
+    - name: developer
+      description: Developer access
+      policies:
+        - p, proj:team-frontend:developer, applications, sync, team-frontend/*, allow
+        - p, proj:team-frontend:developer, applications, get, team-frontend/*, allow
+      groups:
+        - frontend-developers
+    
+    # Admin role - full access
+    - name: admin
+      description: Admin access
+      policies:
+        - p, proj:team-frontend:admin, applications, *, team-frontend/*, allow
+      groups:
+        - frontend-admins
