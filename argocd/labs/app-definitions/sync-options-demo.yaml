@@ -1,0 +1,52 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sync-options-demo
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/YOUR_USERNAME/argocd-demo-apps.git
+    targetRevision: HEAD
+    path: custom-health-app/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dev
+  
+  syncPolicy:
+    # Automated sync configuration
+    automated:
+      prune: true       # Delete resources not in Git
+      selfHeal: true    # Revert manual changes
+      allowEmpty: false # Don't sync if no resources
+    
+    # Sync options
+    syncOptions:
+      - CreateNamespace=true              # Auto-create namespace
+      - PrunePropagationPolicy=foreground # Wait for cascading deletes
+      - PruneLast=true                    # Prune after new resources are healthy
+      - ApplyOutOfSyncOnly=true           # Only apply resources that are OutOfSync
+      - RespectIgnoreDifferences=true     # Honor ignoreDifferences
+      - ServerSideApply=true              # Use server-side apply (K8s 1.16+)
+    
+    # Retry configuration
+    retry:
+      limit: 5                            # Max retry attempts
+      backoff:
+        duration: 5s                      # Initial backoff duration
+        factor: 2                         # Backoff factor
+        maxDuration: 3m                   # Max backoff duration
+  
+  # Ignore certain differences
+  ignoreDifferences:
+    # Ignore replicas if HPA is managing them
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    
+    # Ignore status field changes
+    - group: "*"
+      kind: "*"
+      managedFieldsManagers:
+        - kube-controller-manager
