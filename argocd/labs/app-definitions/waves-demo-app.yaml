@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: waves-demo
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/YOUR_USERNAME/argocd-demo-apps.git
+    targetRevision: HEAD
+    path: waves-demo/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: waves-demo
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    # Manual sync to observe waves clearly
