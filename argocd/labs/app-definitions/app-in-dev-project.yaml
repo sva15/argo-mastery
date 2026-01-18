@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: guestbook-dev-project
+  namespace: argocd
+spec:
+  project: dev-project  # Uses dev-project instead of default
+  source:
+    repoURL: https://github.com/YOUR_USERNAME/argocd-demo-apps.git
+    targetRevision: HEAD
+    path: guestbook-app/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
